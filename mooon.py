@@ -1,89 +1,111 @@
-import pandas as pd # data handling
-import numpy as np # numerical operations
+import pandas as pd
+import numpy as np
+import requests
+import sklearn.preprocessing
+import tweepy
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, LSTM, Dropout
+from tensorflow.keras.layers import Dense, LSTM, Dropout, BatchNormalization, LeakyReLU
+from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
-# import Matplotlib # data visualization
 
-#load csv data
+# Load CSV data
 df = pd.read_csv('Ethereum_history.csv', delimiter=';', parse_dates=['timestamp'])
+df['timestamp'] = pd.to_datetime(df['timestamp'])
+# print(df['timestamp'])
+df.sort_values(by='timestamp', inplace=True)
+# print(df)
 
-# Preview the data
-print(df.head())
+lag_cols = ['open', 'high', 'low', 'close', 'volume']
+lags = range(1, 6)  # Create lag features for the past 5 days
+for col in lag_cols:
+    for lag in lags:
+        df[f'{col}_lag_{lag}'] = df[col].shift(lag)
+# print(df[f'{col}_lag_{lag}'])
 
-# Quick statistical summary
-print(df.describe())
+df.dropna(inplace=True)
+# print(df)
 
-# Convert all relevant columns to datetime if not already
-df['timeOpen'] = pd.to_datetime(df['timeOpen'])
-df['timeClose'] = pd.to_datetime(df['timeClose'])
-df['timeHigh'] = pd.to_datetime(df['timeHigh'])
-df['timeLow'] = pd.to_datetime(df['timeLow'])
+features = ['open_lag_1', 'high_lag_1', 'low_lag_1', 'close_lag_1', 'volume_lag_1']
+target_high = 'high'
+target_low = 'low'
+target_volume = 'volume'
 
-df['MA_7'] = df['close'].rolling(window=7).mean()
+X_train, X_test, y_train_high, y_test_high, y_train_low, y_test_low, y_train_volume, y_test_volume = train_test_split(
+    df[features], df[target_high], df[target_low], df[target_volume], test_size=0.2, random_state=42)
+# print(X_train)
+# print(X_test)
 
-# Normalize features
-from sklearn.preprocessing import StandardScaler
-scaler = StandardScaler()
-df[['open', 'high', 'low', 'close', 'volume']] = scaler.fit_transform(df[['open', 'high', 'low', 'close', 'volume']])
-
-# Model selection and training
-#start with lienar regression as a model type
-# maybe try ARIMA, seasonal ARIMA, LSTM
-# Assume 'df' is your preprocessed DataFrame and 'close' is your target variable
-
-# Function to create sequences
-def create_sequences(data, sequence_length):
-    xs = []
-    ys = []
-    for i in range(len(data) - sequence_length):
-        x = data.iloc[i:(i + sequence_length)].drop(['timestamp'], axis=1)  # drop non-numeric columns if present
-        y = data.iloc[i + sequence_length]['close']
-        xs.append(x)
-        ys.append(y)
-    return np.array(xs), np.array(ys)
-
-# Creating sequences
-sequence_length = 24  # for example, use the last 24 hours to predict the next hour
-X, y = create_sequences(df, sequence_length)
-
-# Splitting the dataset into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-# Define the model architecture
-model = Sequential([
-    LSTM(50, return_sequences=True, input_shape=(X_train.shape[1], X_train.shape[2])),
-    LSTM(50, return_sequences=False),
-    Dense(25),
-    Dense(1)
-])
-
-# Compile the model
-model.compile(optimizer='adam', loss='mean_squared_error')
-
-# Fit the model
-history = model.fit(
-    X_train, y_train,
-    epochs=50,  # You can adjust this
-    batch_size=32,  # And this
-    validation_data=(X_test, y_test),
-    verbose=1
-)
-
-# Evaluate the model
-test_loss = model.evaluate(X_test, y_test)
-print(f"Test Loss: {test_loss}")
-
-import matplotlib.pyplot as plt
-
-# Plot training & validation loss values
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model Loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.show()
+# Normalize the features
+scaler = sklearn.preprocessing.MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+# print("X_Train_Scaled: \n", X_train_scaled)
+# print("X_Test_Scaled: \n", X_test_scaled)
 
 
-# Model evaluation 
+
+# High Model Training
+# model_high = Sequential()
+# model_high.add(Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+# model_high.add(Dense(32, activation='relu'))
+# model_high.add(Dense(1))
+model_high = Sequential()
+model_high.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+model_high.add(Dense(64, activation='relu'))
+model_high.add(Dense(32, activation='relu'))
+model_high.add(Dense(1))
+
+# Low Model Training
+# model_low = Sequential()
+# model_low.add(Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+# model_low.add(Dense(32, activation='relu'))
+# model_low.add(Dense(1))
+model_low = Sequential()
+model_low.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+model_low.add(Dense(64, activation='relu'))
+model_low.add(Dense(32, activation='relu'))
+model_low.add(Dense(1))
+
+
+
+# opt = Adam(learning_rate=0.001)
+model_high.compile(optimizer='adam', loss='mean_squared_error')
+model_high.fit(X_train_scaled, y_train_high, epochs=300, batch_size=32, verbose=1)
+model_high.add(Dropout(0.1))
+model_high.add(BatchNormalization())
+model_high.add(LeakyReLU(alpha=0.01))
+
+
+model_low.compile(optimizer='adam', loss='mean_squared_error')
+model_low.fit(X_train_scaled, y_train_low, epochs=300, batch_size=32, verbose=1)
+model_low.add(Dropout(0.1))
+model_low.add(BatchNormalization())
+model_low.add(LeakyReLU(alpha=0.01))
+
+
+
+# Model Evaluation
+loss_high = model_high.evaluate(X_test_scaled, y_test_high)
+loss_low = model_low.evaluate(X_test_scaled, y_test_low)
+print(f'High Prediction Loss: {loss_high}')
+print(f'Low Prediction Loss: {loss_low}')
+
+
+
+# High Model Prediction
+# Predict high for the next day
+last_day_features = df[features].tail(1)
+last_day_features_scaled = scaler.transform(last_day_features)
+predicted_high = model_high.predict(last_day_features_scaled)
+print(f'Predicted High for the Next Day: {predicted_high}')
+
+# Low Model Prediction
+# Predict low for the next day
+last_day_features = df[features].tail(1)
+last_day_features_scaled = scaler.transform(last_day_features)
+predicted_low = model_low.predict(last_day_features_scaled)
+print(f'Predicted Low for the Next Day: {predicted_low}')
+
+
+
+print('Program end')
