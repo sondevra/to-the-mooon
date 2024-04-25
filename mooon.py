@@ -7,16 +7,59 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, BatchNormalization, LeakyReLU
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
+api_key = '6a3f7b15edc3205ee1d44dfd73562ba034d2e4600f3f0abb179322d1f9c8f426'
+
+# Gets a list of all the coins tracked by cryptocompare
+def get_coin_list(api_key):
+    url = "https://min-api.cryptocompare.com/data/all/coinlist"
+    params = {"api_key": api_key}
+    response = requests.get(url, params=params)
+    data = response.json()
+    return data['Data']
+
+# Get the coin ticker from the user 
+coin_symbol = input("Enter the coin ticker you would like to fetch data for (e.g., BTC, ETH): ")
+coins = get_coin_list(api_key)
+# Check for valid ticker
+if coin_symbol not in coins:
+    print(f"Coin symbol {coin_symbol} not found in CryptoCompare database.")
+    exit
+# Set up get request
+days = 365
+url = "https://min-api.cryptocompare.com/data/v2/histoday"
+params = {
+    "fsym": coin_symbol,
+    "tsym": "USD",
+    "limit": days,
+    "api_key": api_key
+}
+# Make the API request
+response = requests.get(url, params=params)
+data = response.json()['Data']['Data']
+df = pd.DataFrame(data)
+df['time'] = pd.to_datetime(df['time'], unit='s')
+df.rename(columns={
+    'time': 'timestamp',
+    'high': 'high',
+    'low': 'low',
+    'open': 'open',
+    'close': 'close',
+    'volumeto': 'volume'
+}, inplace=True)
+    
+# Select relevant columns
+df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']]
+df = df.sort_values(by='timestamp', ascending=False)
 
 # Load CSV data
-df = pd.read_csv('Ethereum_history.csv', delimiter=';', parse_dates=['timestamp'])
 df['timestamp'] = pd.to_datetime(df['timestamp'])
 # print(df['timestamp'])
 df.sort_values(by='timestamp', inplace=True)
 # print(df)
 
 lag_cols = ['open', 'high', 'low', 'close', 'volume']
-lags = range(1, 6)  # Create lag features for the past 5 days
+#lags = range(1, 6)  # Create lag features for the past 5 days
+lags = range(1, 15)  
 for col in lag_cols:
     for lag in lags:
         df[f'{col}_lag_{lag}'] = df[col].shift(lag)
