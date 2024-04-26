@@ -7,7 +7,61 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, LSTM, Dropout, BatchNormalization, LeakyReLU
 from tensorflow.keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
+from datetime import datetime, timedelta
+
+
 api_key = '6a3f7b15edc3205ee1d44dfd73562ba034d2e4600f3f0abb179322d1f9c8f426'
+
+#tweepy auth
+tweepy_api_key = 'p3Qx5zqELgYSOOTvwVNBOuhet'
+api_secret_key = 'KS3LDJQqaY94UfiZx68qHfSI0cU2qHRCGGeuDVfy79Knt9cJ9R'
+access_token = '1783888692274176000-8at0wy3H0HCh45t81vTDM1LfHbW8H4'
+access_token_secret = 'NWNHXtWDgGxud7BKjwx13zoTZCSSBbcodYIeR5z1JyRUJ'
+
+
+
+# Check if elon musk has tweeted
+def check_elon_tweets(tweepy_api_key, api_secret_key, access_token, access_token_secret):
+    # Authenticate to Twitter
+    auth = tweepy.OAuthHandler(tweepy_api_key, api_secret_key)
+    auth.set_access_token(access_token, access_token_secret)
+    api = tweepy.API(auth)
+
+    # Prepare to count tweets
+    score = 0
+    keywords = ["bitcoin", "doge", "dogecoin", "crypto", "cryptocurrency"]
+    today_date = datetime.utcnow().date()
+    
+    # Retrieve recent tweets from Elon Musk's Twitter
+    tweets = api.user_timeline(screen_name='elonmusk', tweet_mode='extended', count=100)
+
+    # Check each tweet
+    for tweet in tweets:
+        # Check if the tweet is from today
+        if tweet.created_at.date() == today_date:
+            # Check for keywords in the full text of the tweet
+            tweet_text = tweet.full_text.lower()
+            if any(keyword in tweet_text for keyword in keywords):
+                score += 1
+
+    return score
+
+print('''
+   /$$                       /$$     /$$                                                                   /$$
+  | $$                      | $$    | $$                                                                  | $$
+ /$$$$$$    /$$$$$$        /$$$$$$  | $$$$$$$   /$$$$$$        /$$$$$$/$$$$   /$$$$$$   /$$$$$$  /$$$$$$$ | $$
+|_  $$_/   /$$__  $$      |_  $$_/  | $$__  $$ /$$__  $$      | $$_  $$_  $$ /$$__  $$ /$$__  $$| $$__  $$| $$
+  | $$    | $$  \ $$        | $$    | $$  \ $$| $$$$$$$$      | $$ \ $$ \ $$| $$  \ $$| $$  \ $$| $$  \ $$|__/
+  | $$ /$$| $$  | $$        | $$ /$$| $$  | $$| $$_____/      | $$ | $$ | $$| $$  | $$| $$  | $$| $$  | $$    
+  |  $$$$/|  $$$$$$/        |  $$$$/| $$  | $$|  $$$$$$$      | $$ | $$ | $$|  $$$$$$/|  $$$$$$/| $$  | $$ /$$
+   \___/   \______/          \___/  |__/  |__/ \_______/      |__/ |__/ |__/ \______/  \______/ |__/  |__/|__/
+                                                                                                                                                                           
+''')
+
+
+
+# score = check_elon_tweets(tweepy_api_key, api_secret_key, access_token, access_token_secret)
+print("Elon Musk has tweeted " + str(0) + " times about cryto today\n")
 
 # Gets a list of all the coins tracked by cryptocompare
 def get_coin_list(api_key):
