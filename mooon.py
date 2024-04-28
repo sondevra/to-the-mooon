@@ -146,38 +146,81 @@ X_test_scaled = scaler.transform(X_test)
 # model_high.add(Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)))
 # model_high.add(Dense(32, activation='relu'))
 # model_high.add(Dense(1))
+
+# -----------------------------------------------------
+#Order should be : 
+# Dense, 
+# normalization,
+# Activation-------Leaky can be used as activation
+# dropout
+# compile, fit
+# -----------------------------------------------------
 model_high = Sequential()
+# Input Layer
 model_high.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+model_high.add(BatchNormalization())
+model_high.add(LeakyReLU(alpha=0.01))
+model_high.add(Dropout(0.1))
+
+# Hidden Layer 1
 model_high.add(Dense(64, activation='relu'))
+model_high.add(BatchNormalization())
+model_high.add(LeakyReLU(alpha=0.01))
+model_high.add(Dropout(0.1))
+
+# Hidden Layer 2
 model_high.add(Dense(32, activation='relu'))
+model_high.add(BatchNormalization())
+model_high.add(LeakyReLU(alpha=0.01))
+model_high.add(Dropout(0.1))
+
+# Output Layer
 model_high.add(Dense(1))
+
+# opt = Adam(learning_rate=0.001)
+model_high.compile(optimizer='adam', loss='mean_squared_error')
+model_high.fit(X_train_scaled, y_train_high, epochs=300, batch_size=32, verbose=1)
+#------------------------------------------------------------------------------------ end model_high
 
 # Low Model Training
 # model_low = Sequential()
 # model_low.add(Dense(64, activation='relu', input_shape=(X_train_scaled.shape[1],)))
 # model_low.add(Dense(32, activation='relu'))
 # model_low.add(Dense(1))
+
 model_low = Sequential()
+
 model_low.add(Dense(128, activation='relu', input_shape=(X_train_scaled.shape[1],)))
+model_low.add(BatchNormalization())
+model_low.add(LeakyReLU(alpha=0.01))
+model_low.add(Dropout(0.1))
+
 model_low.add(Dense(64, activation='relu'))
+model_low.add(BatchNormalization())
+model_low.add(LeakyReLU(alpha=0.01))
+model_low.add(Dropout(0.1))
+
 model_low.add(Dense(32, activation='relu'))
+model_low.add(BatchNormalization())
+model_low.add(LeakyReLU(alpha=0.01))
+model_low.add(Dropout(0.1))
+
 model_low.add(Dense(1))
-
-
-
-# opt = Adam(learning_rate=0.001)
-model_high.compile(optimizer='adam', loss='mean_squared_error')
-model_high.fit(X_train_scaled, y_train_high, epochs=300, batch_size=32, verbose=1)
-model_high.add(Dropout(0.1))
-model_high.add(BatchNormalization())
-model_high.add(LeakyReLU(alpha=0.01))
 
 
 model_low.compile(optimizer='adam', loss='mean_squared_error')
 model_low.fit(X_train_scaled, y_train_low, epochs=300, batch_size=32, verbose=1)
-model_low.add(Dropout(0.1))
-model_low.add(BatchNormalization())
-model_low.add(LeakyReLU(alpha=0.01))
+
+# opt = Adam(learning_rate=0.001)
+# model_high.compile(optimizer='adam', loss='mean_squared_error')
+# model_high.fit(X_train_scaled, y_train_high, epochs=300, batch_size=32, verbose=1)
+# model_high.add(Dropout(0.1))
+# model_high.add(BatchNormalization())
+# model_high.add(LeakyReLU(alpha=0.01))
+
+# model_low.add(Dropout(0.1))
+# model_low.add(BatchNormalization())
+# model_low.add(LeakyReLU(alpha=0.01))
 
 
 
